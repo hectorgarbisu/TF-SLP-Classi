@@ -2,7 +2,7 @@ __author__ = 'geco'
 import SLP
 from dataset_loader import dataset_loader as dl
 
-dataset_path = "./dataset"
+dataset_path = "./dataset/"
 num_epochs = 20000
 # dataset_lenght = 100
 sample_size = 400
