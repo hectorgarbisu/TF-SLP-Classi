@@ -1,15 +1,21 @@
 __author__ = 'geco'
 from os import listdir
 from random import shuffle
-
-from matplotlib import pyplot
 from copy import deepcopy
 
+from matplotlib import pyplot
+
+
 class dataset_loader:
+
 
     """ path """
     def __init__ (self, path="./dataset/"):
         self.path = path
+        self.dataset = [[[]]]
+        self.labels = []
+        self.labels_dict = dict()
+        self.batch_idx = 0
 
     "Whenever a class set is under a certain (min_per_label) number of samples" \
     "it will be ignored. Program will also avoid reading over (max_per_label) samples" \
@@ -28,15 +34,21 @@ class dataset_loader:
         "read (ccty) files of each class from folder at random order" \
         "get files, its labels, and its sizes"
         files,labels,sizes = self._get_files(file_list,labels_dict)
-        print "files: ",len(files)," labels: ",labels," sizes: ",sizes
+        # print "files: ",len(files)," labels: ",labels," sizes: ",sizes
         "Fix every sample to (fixed_sig_size)"
         fixed_data = self._interpolate_points(files,sizes,fixed_sig_size)
-        "build tensor of data [label_idx, sample_idx, fixed_sig_size*2]"
-        # print len(files[4][0::2]),len(files[4][1::2])
-        _, (b,c) = pyplot.subplots(2)
-        b.plot(files[4][0::2],files[4][1::2])
-        c.plot(fixed_data[4][0::2],fixed_data[4][1::2])
-        pyplot.show()
+
+        self.dataset = fixed_data
+        self.labels = labels
+        self.labels_dict = labels_dict
+
+        print [(labels[i],", prev size: ",len(files[i])," fixed size:",len(fixed_data[i])) for i in range(len(files))]
+
+        # _, (b,c) = pyplot.subplots(2)
+        # b.plot([p[0] for p in files[4]],[p[1] for p in files[4]])
+        # c.plot([p[0] for p in fixed_data[4]],[p[1] for p in fixed_data[4]])
+        # # c.plot(fixed_data[4][::][0],fixed_data[4][::][1])
+        # pyplot.show()
 
     def _get_labels(self,filelist):
         labels_dict = dict()
@@ -58,13 +70,13 @@ class dataset_loader:
         for label,ctty in labels_dict_copy.iteritems():
             if (ctty<min_per_label):
                 "If a class doesn't have enough members it will be ignored"
-                print "class ",label,"is deleted because: ",ctty,"<",min_per_label
+                # print "class ",label,"is deleted because: ",ctty,"<",min_per_label
                 labels_dict.pop(label)
             else:
                 min_val = min(min_val,ctty)
         for label,ctty in labels_dict.iteritems():
             "If a class does have too many members it will be cut"
-            print "class ",label,"is capped from ",ctty,"to ",min_val
+            # print "class ",label,"is capped from ",ctty,"to ",min_val
             labels_dict[label]=min_val
         return labels_dict
 
@@ -96,21 +108,18 @@ class dataset_loader:
         for line in f:
             xi,yi = line.split()
             "coordinates between -1 and 1"
-            data.append(2*float(xi)/float(xdim)-1)
-            data.append(1-2*float(yi)/float(ydim))
-        dataset_length = len(data)/2
+            data.append((2*float(xi)/float(xdim)-1,1-2*float(yi)/float(ydim)))
+        dataset_length = len(data)
         f.close()
         return data,period,dataset_length
 
     def _interpolate_points(self,data_samples,sizes,number_of_points):
-        # TODO: deepcopy isn't enough
-        new_points = self._l_of_l_copy(data_samples)
-        print len(new_points)
+        new_points = deepcopy(data_samples)
         for ii in range(len(sizes)):
             size = sizes[ii]
             # print size, len(data_samples[ii])
             if(size>number_of_points):
-                # TODO : this
+                # Won't need this part by the moment
                 "We need to remove some points"
                 residue = number_of_points-size
                 remove_distance = size//residue
@@ -125,17 +134,16 @@ class dataset_loader:
                 current_size = size
                 jj = 0
                 while(current_size<number_of_points):
-                    new_x,new_y = self._middle_point(new_points[ii][jj],new_points[ii][jj+1],
-                                                     new_points[ii][jj+2],new_points[ii][jj+3])
-                    new_points[ii].insert(jj+1,new_x)
-                    new_points[ii].insert(jj+3,new_y)
+                    # print "jj: ",jj," ii: ", ii," number_of_points: ",number_of_points, " current_size: ",current_size
+                    new_point = self._middle_point(new_points[ii][jj],new_points[ii][jj+1])
+                    new_points[ii].insert(jj+1,new_point)
                     current_size += 1
                     " loop through the whole sample as many times as needed "
-                    jj = (jj+4)%(current_size)
+                    jj = (jj+2)%(current_size-1)
         return new_points
 
-    def _middle_point(self,x1,y1,x2,y2):
-        return (x1+x2)/2,(y1+y2)/2
+    def _middle_point(self,p1,p2):
+        return ((p1[0]+p2[0])/2,(p1[1]+p2[1])/2)
 
     def _l_of_l_copy(self, list_of_lists):
         " Yo dawg "
@@ -147,5 +155,15 @@ class dataset_loader:
             copy.append(sublist_copy)
         return copy
 
-    def next_batch(self, batch_size):
-        print "miau"
+    def next_batch(self, batch_size=1):
+        j = self.batch_idx
+        inputs = []
+        expected_outputs = []
+        for i in range(batch_size):
+            inputs.append(self.dataset[(i+j)%len(self.dataset)])
+            expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
+        self.batch_idx += batch_size
+        return inputs,expected_outputs
+
+    def get_classes(self):
+        return self.labels_dict

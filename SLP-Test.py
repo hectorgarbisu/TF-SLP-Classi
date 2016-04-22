@@ -108,7 +108,7 @@ for epoch in range(num_epochs):
 
         # print "xbatch",xbatch.size
         sess.run(train, feed_dict={x: xbatch, y_: ybatch})
-        #print sess.run(error_measure, feed_dict={x: xs, y_: ys})
+        # print sess.run(error_measure, feed_dict={x: xs, y_: ys})
 
     if (epoch % (num_epochs//10)) == 0:
         print "error:",sess.run(error_measure, feed_dict={x: xbatch, y_: ybatch})

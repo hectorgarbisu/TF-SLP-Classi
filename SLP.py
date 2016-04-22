@@ -19,4 +19,5 @@ class SLP:
         self.sess = tf.Session()
 
     def feed_batch(self, batch, labels):
+
         print "hi"
