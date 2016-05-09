@@ -2,7 +2,7 @@ __author__ = 'geco'
 from os import listdir
 from random import shuffle
 from copy import deepcopy
-
+import numpy as np
 from matplotlib import pyplot
 
 
@@ -155,6 +155,19 @@ class dataset_loader:
             copy.append(sublist_copy)
         return copy
 
+    def next_2d_batch(self, batch_size=1):
+        j = self.batch_idx
+        inputs = []
+        expected_outputs = []
+        for i in range(batch_size):
+            current_sample = self.dataset[(i+j)%len(self.dataset)]
+            flattened_sample = np.array(current_sample).flatten()
+            inputs.append(flattened_sample)
+            expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
+        self.batch_idx += batch_size
+        self.batch_idx %= len(self.dataset)
+        return inputs,expected_outputs
+
     def next_batch(self, batch_size=1):
         j = self.batch_idx
         inputs = []
@@ -164,6 +177,7 @@ class dataset_loader:
             expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
         self.batch_idx += batch_size
         return inputs,expected_outputs
+
 
     def get_classes(self):
         return self.labels_dict

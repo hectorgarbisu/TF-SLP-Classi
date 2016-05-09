@@ -10,14 +10,14 @@ class SLP:
         self.W_output = tf.Variable(tf.truncated_normal([hidden_size, output_size]))
         self.b_output = tf.Variable(tf.truncated_normal([output_size]))
         self.init = tf.initialize_all_variables()
-        x = tf.placeholder("float", [None, self.input_size])  # "None" as dimension for versatility between batches and non-batches
-        y_ = tf.placeholder("float", [None, self.output_size])
-        y_hidden = tf.tanh(tf.matmul(x, self.W_hidden) + self.b_hidden)
+        self.x = tf.placeholder("float", [None, self.input_size])  # "None" as dimension for versatility between batches and non-batches
+        self.y_ = tf.placeholder("float", [None, self.output_size])
+        y_hidden = tf.tanh(tf.matmul(self.x, self.W_hidden) + self.b_hidden)
         y = tf.tanh(tf.matmul(y_hidden, self.W_output) + self.b_output) # If 2 layers
-        error_measure = tf.reduce_sum(tf.square(y_ - y))
-        self.train = tf.train.GradientDescentOptimizer(alpha).minimize(error_measure)
+        self.error_measure = tf.reduce_sum(tf.square(self.y_ - y))
+        self.train = tf.train.GradientDescentOptimizer(alpha).minimize(self.error_measure)
         self.sess = tf.Session()
 
     def feed_batch(self, batch, labels):
-
+        print "error:",self.sess.run(self.error_measure, feed_dict={self.x: batch, self.y_: labels})
         print "hi"
