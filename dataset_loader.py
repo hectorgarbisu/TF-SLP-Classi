@@ -15,6 +15,7 @@ class dataset_loader:
         self.dataset = [[[]]]
         self.labels = []
         self.labels_dict = dict()
+        self.labels_to_hot = dict()
         self.batch_idx = 0
 
     "Whenever a class set is under a certain (min_per_label) number of samples" \
@@ -34,19 +35,19 @@ class dataset_loader:
         "read (ccty) files of each class from folder at random order" \
         "get files, its labels, and its sizes"
         files,labels,sizes = self._get_files(file_list,labels_dict)
-        # print "files: ",len(files)," labels: ",labels," sizes: ",sizes
+        print "files: ",len(files)," labels: ",labels," sizes: ",sizes
         "Fix every sample to (fixed_sig_size)"
         fixed_data = self._interpolate_points(files,sizes,fixed_sig_size)
 
+        self.labels_to_hot = self._labels_to_hot(labels_dict)
         self.dataset = fixed_data
         self.labels = labels
         self.labels_dict = labels_dict
-
-        print [(labels[i],", prev size: ",len(files[i])," fixed size:",len(fixed_data[i])) for i in range(len(files))]
+        # print [(labels[i],", prev size: ",len(files[i])," fixed size:",len(fixed_data[i])) for i in range(len(files))]
 
         # _, (b,c) = pyplot.subplots(2)
-        # b.plot([p[0] for p in files[4]],[p[1] for p in files[4]])
-        # c.plot([p[0] for p in fixed_data[4]],[p[1] for p in fixed_data[4]])
+        # b.plot([p[0] for p in files[4]],[p[1] for p in files[4]],'.')
+        # c.plot([p[0] for p in fixed_data[4]],[p[1] for p in fixed_data[4]],'.')
         # # c.plot(fixed_data[4][::][0],fixed_data[4][::][1])
         # pyplot.show()
 
@@ -145,6 +146,14 @@ class dataset_loader:
     def _middle_point(self,p1,p2):
         return ((p1[0]+p2[0])/2,(p1[1]+p2[1])/2)
 
+    def _labels_to_hot(self,labels_dict):
+        labels_to_hot = dict()
+        identity_list = np.identity(len(labels_dict)).tolist()
+        labels_to_hot = {labels_dict.keys()[idx] : identity_list[idx] for idx in range(len(labels_dict))}
+        return labels_to_hot
+
+
+
     def _l_of_l_copy(self, list_of_lists):
         " Yo dawg "
         copy = list()
@@ -166,7 +175,9 @@ class dataset_loader:
             expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
         self.batch_idx += batch_size
         self.batch_idx %= len(self.dataset)
-        return inputs,expected_outputs
+        this_batch_hotones = [self.labels_to_hot[label] for label in expected_outputs]
+        this_batch_hotones_array = np.atleast_2d(this_batch_hotones)
+        return inputs,expected_outputs, this_batch_hotones_array
 
     def next_batch(self, batch_size=1):
         j = self.batch_idx
@@ -176,8 +187,12 @@ class dataset_loader:
             inputs.append(self.dataset[(i+j)%len(self.dataset)])
             expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
         self.batch_idx += batch_size
-        return inputs,expected_outputs
+        return np.atleast_2d(inputs),expected_outputs
 
+    def get_labels_to_hot_dict(self):
+        return self.labels_to_hot
 
-    def get_classes(self):
-        return self.labels_dict
+    """ Return test set and its labels """
+    """ TODO: Actual set and actual labels """
+    def get_test_set(self):
+        return zip(self.dataset,self.labels)
