@@ -4,13 +4,12 @@ import numpy as np
 from dataset_loader import dataset_loader
 
 dataset_path = "./dataset/"
-num_epochs = 2000
+num_epochs = 20000
 # dataset_lenght = 100
 sample_size = 100
-num_batches = 1
 alpha = 0.01
 nW_hidden = 5
-batch_size = 5
+batch_size = 10
 
 dl = dataset_loader(dataset_path)
 dl.load(fixed_sig_size=sample_size)
@@ -32,7 +31,9 @@ for ii in range(num_epochs):
     if (ii % (num_epochs//10)) == 0:
         print "error:",slp.error(batch,hotone_labels)
 
-#######################################
+##################
+###### TEST ######
+##################
 
 total = 0
 error = 0
@@ -46,4 +47,4 @@ for signature, expected_label in dl.get_test_set():
     if(max0!=max1):
         error += 1
 
-print "errores: ",error, "/",total
+print "errores: ",error, "/",total," : ",100*(1-float(error)/total),"% acierto"

@@ -2,8 +2,8 @@ __author__ = 'geco'
 from os import listdir
 from random import shuffle
 from copy import deepcopy
+from math import floor,ceil
 import numpy as np
-from matplotlib import pyplot
 
 
 class dataset_loader:
@@ -12,9 +12,11 @@ class dataset_loader:
     """ path """
     def __init__ (self, path="./dataset/"):
         self.path = path
-        self.dataset = [[[]]]
-        self.labels = []
-        self.labels_dict = dict()
+        self.training_set = []
+        self.test_set = []
+        self.training_labels = []
+        self.test_labels = []
+        self.class_cardinalities = dict()
         self.labels_to_hot = dict()
         self.batch_idx = 0
 
@@ -25,24 +27,32 @@ class dataset_loader:
     def load(self, min_per_label=20, max_per_label=40, fixed_sig_size=100):
         file_list = listdir(self.path)
         "get list of available class names"
-        labels_dict = self._get_labels(file_list)
+        class_cardinalities = self._get_labels(file_list)
         "get cardinality of each class (dictionary)"
-        print "labels dict: ",labels_dict
+        print "labels dict: ",class_cardinalities
         "Cap every class set to a maximum number of members equal" \
         "to the size of the smaller class (ccty)"
-        labels_dict = self._filter_labels(labels_dict,min_per_label,max_per_label)
-        print "filtered and adjusted labels: ", labels_dict
+        class_cardinalities = self._filter_labels(class_cardinalities,min_per_label,max_per_label)
+        print "filtered and adjusted labels: ", class_cardinalities
         "read (ccty) files of each class from folder at random order" \
         "get files, its labels, and its sizes"
-        files,labels,sizes = self._get_files(file_list,labels_dict)
+        files,labels,sizes = self._get_files(file_list,class_cardinalities)
         print "files: ",len(files)," labels: ",labels," sizes: ",sizes
         "Fix every sample to (fixed_sig_size)"
         fixed_data = self._interpolate_points(files,sizes,fixed_sig_size)
+        self.labels_to_hot = self._labels_to_hot(class_cardinalities)
+        self.class_cardinalities = class_cardinalities
 
-        self.labels_to_hot = self._labels_to_hot(labels_dict)
-        self.dataset = fixed_data
-        self.labels = labels
-        self.labels_dict = labels_dict
+        "Separate training and test set"
+        training_indexes,test_indexes = self._get_training_and_test_indexes(labels)
+        print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
+        for ii in training_indexes:
+            self.training_set.append(fixed_data[ii])
+            self.training_labels.append(labels[ii])
+        for ii in test_indexes:
+            self.test_set.append(fixed_data[ii])
+            self.test_labels.append(labels[ii])
+        print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
         # print [(labels[i],", prev size: ",len(files[i])," fixed size:",len(fixed_data[i])) for i in range(len(files))]
 
         # _, (b,c) = pyplot.subplots(2)
@@ -146,6 +156,14 @@ class dataset_loader:
     def _middle_point(self,p1,p2):
         return ((p1[0]+p2[0])/2,(p1[1]+p2[1])/2)
 
+    " Unproportional sharing "
+    def _get_training_and_test_indexes(self,labels,test_share=0.3):
+        train_indexes = range(int(floor(test_share*len(labels))))
+        test_indexes = range(int(ceil(test_share*len(labels))-1),len(labels))
+        print train_indexes
+        print test_indexes
+        return test_indexes,train_indexes
+
     def _labels_to_hot(self,labels_dict):
         labels_to_hot = dict()
         identity_list = np.identity(len(labels_dict)).tolist()
@@ -169,12 +187,12 @@ class dataset_loader:
         inputs = []
         expected_outputs = []
         for i in range(batch_size):
-            current_sample = self.dataset[(i+j)%len(self.dataset)]
+            current_sample = self.training_set[(i+j)%len(self.training_set)]
             flattened_sample = np.array(current_sample).flatten()
             inputs.append(flattened_sample)
-            expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
+            expected_outputs.append(self.training_labels[(i+j)%len(self.training_set)])
         self.batch_idx += batch_size
-        self.batch_idx %= len(self.dataset)
+        self.batch_idx %= len(self.training_set)
         this_batch_hotones = [self.labels_to_hot[label] for label in expected_outputs]
         this_batch_hotones_array = np.atleast_2d(this_batch_hotones)
         return inputs,expected_outputs, this_batch_hotones_array
@@ -184,8 +202,8 @@ class dataset_loader:
         inputs = []
         expected_outputs = []
         for i in range(batch_size):
-            inputs.append(self.dataset[(i+j)%len(self.dataset)])
-            expected_outputs.append(self.labels[(i+j)%len(self.dataset)])
+            inputs.append(self.training_set[(i+j)%len(self.training_set)])
+            expected_outputs.append(self.training_labels[(i+j)%len(self.training_set)])
         self.batch_idx += batch_size
         return np.atleast_2d(inputs),expected_outputs
 
@@ -193,6 +211,5 @@ class dataset_loader:
         return self.labels_to_hot
 
     """ Return test set and its labels """
-    """ TODO: Actual set and actual labels """
     def get_test_set(self):
-        return zip(self.dataset,self.labels)
+        return zip(self.test_set,self.test_labels)
