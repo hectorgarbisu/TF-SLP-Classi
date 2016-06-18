@@ -4,11 +4,11 @@ import numpy as np
 from dataset_loader import dataset_loader
 
 dataset_path = "./dataset/"
-num_epochs = 20000
+num_epochs = 200000
 # dataset_lenght = 100
 sample_size = 100
 alpha = 0.01
-nW_hidden = 5
+nW_hidden = 20
 batch_size = 10
 
 dl = dataset_loader(dataset_path)
@@ -25,11 +25,13 @@ batch,labels,hotone_labels = dl.next_2d_batch(batch_size)
 # Number of inputs will depend on the adjusted size of each sample
 # Number of outputs will depend on the number of different classes to classify
 
+err = 0
 for ii in range(num_epochs):
     batch,_,hotone_labels = dl.next_2d_batch(batch_size)
     slp.feed_batch(batch,hotone_labels)
+    err += slp.error(batch,hotone_labels)
     if (ii % (num_epochs//10)) == 0:
-        print "error:",slp.error(batch,hotone_labels)
+        print "error medio:",err/(ii+1)
 
 ##################
 ###### TEST ######
