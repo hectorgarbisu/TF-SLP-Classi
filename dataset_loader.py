@@ -3,6 +3,7 @@ from os import listdir
 from random import shuffle
 from copy import deepcopy
 from math import floor,ceil
+from matplotlib import pyplot
 import numpy as np
 
 
@@ -38,21 +39,25 @@ class dataset_loader:
         "get files, its labels, and its sizes"
         files,labels,sizes = self._get_files(file_list,class_cardinalities)
         print "files: ",len(files)," labels: ",labels," sizes: ",sizes
-        "Fix every sample to (fixed_sig_size)"
-        fixed_data = self._interpolate_points(files,sizes,fixed_sig_size)
+        "TODO: center around first point"
+        centered_sigs = self._center(files)
+        "TODO: adjust over signature size, not canvas size"
+        resized_centered_sigs = self._resize(centered_sigs)
+        "Fix every sample to (fixed_sig_length)"
+        fixed_data = self._interpolate_points(resized_centered_sigs,sizes,fixed_sig_size)
         self.labels_to_hot = self._labels_to_hot(class_cardinalities)
         self.class_cardinalities = class_cardinalities
 
         "Separate training and test set"
         training_indexes,test_indexes = self._get_training_and_test_indexes(labels)
-        print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
+        # print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
         for ii in training_indexes:
             self.training_set.append(fixed_data[ii])
             self.training_labels.append(labels[ii])
         for ii in test_indexes:
             self.test_set.append(fixed_data[ii])
             self.test_labels.append(labels[ii])
-        print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
+        # print len(self.training_set),len(self.training_labels),len(self.test_set),len(self.test_labels)
         # print [(labels[i],", prev size: ",len(files[i])," fixed size:",len(fixed_data[i])) for i in range(len(files))]
 
         # _, (b,c) = pyplot.subplots(2)
@@ -124,6 +129,36 @@ class dataset_loader:
         f.close()
         return data,period,dataset_length
 
+    def _center(self, irregular_signatures):
+        centered_irregular_signatures = []
+        for irregular_signature in irregular_signatures:
+            x0 = irregular_signature[0][0]
+            y0 = irregular_signature[0][1]
+            centered_irregular_signatures.append(
+                [(xx-x0,yy-y0) for (xx,yy) in irregular_signature]
+            )
+        print centered_irregular_signatures
+        return centered_irregular_signatures
+
+    def _resize(self,irregular_centered_signatures, preserve_aspect_ratio = True):
+        resized_centered_signatures = []
+        a0 = 0.000001 # almost_zero : monstrous thing to prevent divisions by 0
+        for i_c_s in irregular_centered_signatures:
+            xmax = max([xy[0]+a0 for xy in i_c_s])
+            ymax = max([xy[1]+a0 for xy in i_c_s])
+            xmin = min([xy[0]-a0 for xy in i_c_s])
+            ymin = min([xy[1]-a0 for xy in i_c_s])
+            "Fitting is made so the first point keeps at 0,0"
+            xsf = min(-1/xmin,1/xmax) # x_scalation_factor
+            ysf = min(-1/ymin,1/ymax) # y_scalation_factor
+            if preserve_aspect_ratio:
+                xsf = ysf = min(xsf,ysf)
+            resized_centered_signatures.append(
+                [(xx*xsf,yy*ysf) for (xx,yy) in i_c_s]
+            )
+        return resized_centered_signatures
+
+
     def _interpolate_points(self,data_samples,sizes,number_of_points):
         new_points = deepcopy(data_samples)
         for ii in range(len(sizes)):
@@ -136,7 +171,7 @@ class dataset_loader:
                 remove_distance = size//residue
                 new_points[ii].remove(remove_distance-1)
             elif(size<1):
-                "This signature sucks"
+                "Null signature"
                 Exception("Signature without data")
             else:
                 "We need to add some points"
@@ -144,6 +179,7 @@ class dataset_loader:
                 "until size=number_of_points"
                 current_size = size
                 jj = 0
+                """ Return test set and its labels """
                 while(current_size<number_of_points):
                     # print "jj: ",jj," ii: ", ii," number_of_points: ",number_of_points, " current_size: ",current_size
                     new_point = self._middle_point(new_points[ii][jj],new_points[ii][jj+1])
@@ -160,8 +196,8 @@ class dataset_loader:
     def _get_training_and_test_indexes(self,labels,test_share=0.3):
         train_indexes = range(int(floor(test_share*len(labels))))
         test_indexes = range(int(ceil(test_share*len(labels))-1),len(labels))
-        print train_indexes
-        print test_indexes
+        # print train_indexes
+        # print test_indexes
         return test_indexes,train_indexes
 
     def _labels_to_hot(self,labels_dict):
@@ -210,6 +246,6 @@ class dataset_loader:
     def get_labels_to_hot_dict(self):
         return self.labels_to_hot
 
-    """ Return test set and its labels """
+
     def get_test_set(self):
         return zip(self.test_set,self.test_labels)
