@@ -1,32 +1,33 @@
 import tensorflow as tf
 
 class SLP:
-    def __init__(self, input_size, hidden_size, output_size, alpha=0.01):
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.W_hidden = tf.Variable(tf.truncated_normal([input_size, hidden_size]))
-        self.b_hidden = tf.Variable(tf.truncated_normal([hidden_size]))
-        self.W_output = tf.Variable(tf.truncated_normal([hidden_size, output_size]))
-        self.b_output = tf.Variable(tf.truncated_normal([output_size]))
-        self.x = tf.placeholder("float", [None, self.input_size])  # "None" as dimension for versatility between batches and non-batches
-        self.y_ = tf.placeholder("float", [None, self.output_size])
-        y_hidden = tf.sigmoid(tf.matmul(self.x, self.W_hidden) + self.b_hidden)
-        # y = tf.tanh(tf.matmul(y_hidden, self.W_output) + self.b_output)
-        # self.error_measure = tf.reduce_sum(tf.square(self.y_ - y))
-        self.y = tf.nn.softmax(tf.matmul(y_hidden, self.W_output) + self.b_output)
-        # self.error_measure = tf.reduce_mean(tf.reduce_sum(-self.y_*tf.log(self.y)))
-        self.error_measure = tf.reduce_mean(tf.reduce_mean(-self.y_*tf.log(self.y)))
-        self.train = tf.train.GradientDescentOptimizer(alpha).minimize(self.error_measure)
-        self.init = tf.initialize_all_variables()
-        self.sess = tf.Session()
-        self.sess.run(self.init)
+    def __init__(s, input_size, hidden_size, output_size, alpha=0.01):
+        s.input_size = input_size
+        s.hidden_size = hidden_size
+        s.output_size = output_size
+        s.W_hidden = tf.Variable(tf.truncated_normal([input_size, hidden_size]))
+        s.b_hidden = tf.Variable(tf.truncated_normal([hidden_size]))
+        s.W_output = tf.Variable(tf.truncated_normal([hidden_size, output_size]))
+        s.b_output = tf.Variable(tf.truncated_normal([output_size]))
+        s.x = tf.placeholder("float", [None, s.input_size])  # "None" as dimension for versatility between batches and non-batches
+        s.y_ = tf.placeholder("float", [None, s.output_size])
+        y_hidden = tf.sigmoid(tf.matmul(s.x, s.W_hidden) + s.b_hidden)
+        # y = tf.tanh(tf.matmul(y_hidden, s.W_output) + s.b_output)
+        s.ylogits = tf.matmul(y_hidden, s.W_output) + s.b_output
+        s.y = tf.nn.softmax(s.ylogits)
+        # s.error_measure = tf.reduce_sum(tf.square(s.y_ - s.y))
+        # s.error_measure = tf.reduce_mean(tf.reduce_mean(-s.y_*tf.log(s.y)))
+        s.error_measure = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(s.ylogits, s.y_))
+        s.train = tf.train.GradientDescentOptimizer(alpha).minimize(s.error_measure)
+        s.init = tf.initialize_all_variables()
+        s.sess = tf.Session()
+        s.sess.run(s.init)
 
-    def feed_batch(self, batch, expected_outputs):
-        self.sess.run(self.train, feed_dict={self.x: batch, self.y_: expected_outputs})
+    def feed_batch(s, batch, expected_outputs):
+        s.sess.run(s.train, feed_dict={s.x: batch, s.y_: expected_outputs})
 
-    def error(self,batch,expected_outputs):
-        return self.sess.run(self.error_measure, feed_dict={self.x: batch, self.y_: expected_outputs})
+    def error(s,batch,expected_outputs):
+        return s.sess.run(s.error_measure, feed_dict={s.x: batch, s.y_: expected_outputs})
 
-    def categorize(self, data):
-        return self.sess.run(self.y, feed_dict={self.x: data})
+    def categorize(s, data):
+        return s.sess.run(s.y, feed_dict={s.x: data})

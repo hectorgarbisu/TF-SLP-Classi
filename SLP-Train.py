@@ -1,15 +1,17 @@
+from reportlab.graphics.charts.axes import sample0a
+
 __author__ = 'geco'
 import SLP
 import numpy as np
 from dataset_loader import dataset_loader
 
 dataset_path = "./dataset/"
-num_epochs = 200000
+num_epochs = 2000
 # dataset_lenght = 100
 sample_size = 100
 alpha = 0.01
-nW_hidden = 20
-batch_size = 10
+nW_hidden = 400
+batch_size = 30
 
 dl = dataset_loader(dataset_path)
 dl.load(fixed_sig_size=sample_size)
@@ -41,7 +43,7 @@ total = 0
 error = 0
 for signature, expected_label in dl.get_test_set():
     flat_signature = np.array(signature).flatten()
-    flat_signature = flat_signature.reshape([1,200])
+    flat_signature = flat_signature.reshape([1,2*sample_size])
     predicted_label = slp.categorize(flat_signature)
     max0 = np.argmax(la_to_ho[expected_label])
     max1 = np.argmax(predicted_label)

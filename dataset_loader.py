@@ -137,7 +137,7 @@ class dataset_loader:
             centered_irregular_signatures.append(
                 [(xx-x0,yy-y0) for (xx,yy) in irregular_signature]
             )
-        print centered_irregular_signatures
+        # print centered_irregular_signatures
         return centered_irregular_signatures
 
     def _resize(self,irregular_centered_signatures, preserve_aspect_ratio = True):
